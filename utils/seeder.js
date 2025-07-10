@@ -3,7 +3,18 @@ const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs'); // For hashing passwords for seeded users
 
 // Load env vars
-dotenv.config({ path: '../.env' });
+const dotenvResult = dotenv.config({ path: './.env' }); // Capture the result
+
+// Log the result of dotenv.config()
+if (dotenvResult.error) {
+  console.error('dotenv config error:', dotenvResult.error);
+} else {
+  console.log('dotenv parsed variables:', dotenvResult.parsed);
+}
+
+// Now, log the MONGO_URI to see its value
+console.log('MONGO_URI from process.env:', process.env.MONGO_URI);
+
 
 // Load models
 const User = require('../models/userModel');
