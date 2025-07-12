@@ -1,9 +1,12 @@
+const crypto = require('crypto');
 const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const Customer = require('../models/customerModel');
 const Driver = require('../models/driverModel');
+const Admin = require('../models/adminModel');
+const sendEmail = require('../utils/sendEmail');
 
 // Helper function to generate JWT token
 const generateToken = (id) => {
@@ -23,15 +26,18 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error('Please enter all required fields');
   }
 
-  // Check if user already exists
   const userExists = await User.findOne({ email });
   if (userExists) {
     res.status(400);
     throw new Error('User already exists');
   }
 
-  // Create User
-  const user = await User.create({ email, password, role });
+  const user = new User({ email, password, role });
+
+  const verificationToken = crypto.randomBytes(20).toString('hex');
+  user.verificationToken = verificationToken;
+
+  await user.save();
 
   if (user) {
     let profile;
@@ -44,36 +50,50 @@ const registerUser = asyncHandler(async (req, res) => {
         userId: user._id,
       });
     } else if (role === 'driver') {
-      // For driver, you'd need licenseNumber, vehicleDetails etc.
-      // For simplicity, adding basic fields here.
       profile = await Driver.create({
         firstName,
         lastName,
         phoneNumber,
-        licenseNumber: req.body.licenseNumber || 'N/A', // Required for driver
+        licenseNumber: req.body.licenseNumber || 'N/A',
         vehicleDetails: req.body.vehicleDetails || 'N/A',
         userId: user._id,
       });
     } else if (role === 'admin') {
-      // Admin profile might be simpler, or a separate Admin model
-      // For now, just link to user
-      profile = { _id: user._id, firstName, lastName }; // Placeholder for admin profile
+      profile = await Admin.create({
+        firstName,
+        lastName,
+        userId: user._id,
+      });
     } else {
       res.status(400);
       throw new Error('Invalid user role');
     }
 
-    // Link profile to user
     user.profile = profile._id;
     await user.save();
 
-    res.status(201).json({
-      _id: user._id,
-      email: user.email,
-      role: user.role,
-      profileId: profile._id,
-      token: generateToken(user._id),
-    });
+    // Send verification email
+    const verificationUrl = `${req.protocol}://${req.get(
+      'host'
+    )}/api/auth/verify-email/${verificationToken}`;
+
+    const message = `Thank you for registering! Please verify your email by clicking the following link: \n\n ${verificationUrl}`;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Email Verification',
+        message,
+      });
+
+      res.status(201).json({ message: 'Registration successful! Please check your email to verify your account.' });
+    } catch (error) {
+      console.error(error);
+      user.verificationToken = undefined;
+      await user.save();
+      res.status(500);
+      throw new Error('Email could not be sent');
+    }
   } else {
     res.status(400);
     throw new Error('Invalid user data');
@@ -86,15 +106,19 @@ const registerUser = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  // Check for user email
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
+    if (!user.isVerified) {
+      res.status(401);
+      throw new Error('Please verify your email before logging in.');
+    }
+
     res.json({
       _id: user._id,
       email: user.email,
       role: user.role,
-      profileId: user.profile, // Return profile ID
+      profileId: user.profile,
       token: generateToken(user._id),
     });
   } else {
@@ -107,7 +131,7 @@ const loginUser = asyncHandler(async (req, res) => {
 // @route   GET /api/auth/profile
 // @access  Private
 const getUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select('-password').populate('profile'); // Populate the specific profile
+  const user = await User.findById(req.user._id).select('-password').populate('profile');
 
   if (user) {
     res.json(user);
@@ -117,4 +141,21 @@ const getUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { registerUser, loginUser, getUserProfile };
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+
+  const user = await User.findOne({ verificationToken: token });
+
+  if (!user) {
+    res.status(400);
+    throw new Error('Invalid or expired verification token.');
+  }
+
+  user.isVerified = true;
+  user.verificationToken = undefined;
+  await user.save();
+
+  res.status(200).json({ message: 'Email verified successfully! You can now log in.' });
+});
+
+module.exports = { registerUser, loginUser, getUserProfile, verifyEmail };
