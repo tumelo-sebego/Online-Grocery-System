@@ -109,10 +109,10 @@ const loginUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
-    if (!user.isVerified) {
+    /* if (!user.isVerified) {
       res.status(401);
       throw new Error('Please verify your email before logging in.');
-    }
+    } */
 
     res.json({
       _id: user._id,
