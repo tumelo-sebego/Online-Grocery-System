@@ -19,6 +19,13 @@ const userSchema = mongoose.Schema(
       enum: ['customer', 'admin', 'driver'],
       default: 'customer',
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationToken: {
+      type: String,
+    },
     // Reference to specific profile (Customer, Driver, etc.)
     profile: {
       type: mongoose.Schema.Types.ObjectId,
