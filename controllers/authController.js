@@ -5,8 +5,6 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const Customer = require('../models/customerModel');
 const Driver = require('../models/driverModel');
-const Admin = require('../models/adminModel');
-const sendEmail = require('../utils/sendEmail');
 
 // Helper function to generate JWT token
 const generateToken = (id) => {
@@ -59,11 +57,9 @@ const registerUser = asyncHandler(async (req, res) => {
         userId: user._id,
       });
     } else if (role === 'admin') {
-      profile = await Admin.create({
-        firstName,
-        lastName,
-        userId: user._id,
-      });
+      // Admin profile might be simpler, or a separate Admin model
+      // For now, just link to user
+      profile = { _id: user._id, firstName, lastName }; // Placeholder for admin profile
     } else {
       res.status(400);
       throw new Error('Invalid user role');
@@ -141,21 +137,4 @@ const getUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-const verifyEmail = asyncHandler(async (req, res) => {
-  const { token } = req.params;
-
-  const user = await User.findOne({ verificationToken: token });
-
-  if (!user) {
-    res.status(400);
-    throw new Error('Invalid or expired verification token.');
-  }
-
-  user.isVerified = true;
-  user.verificationToken = undefined;
-  await user.save();
-
-  res.status(200).json({ message: 'Email verified successfully! You can now log in.' });
-});
-
-module.exports = { registerUser, loginUser, getUserProfile, verifyEmail };
+module.exports = { registerUser, loginUser, getUserProfile };

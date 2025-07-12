@@ -13,4 +13,4 @@ router.post('/login', loginUser);
 router.get('/profile', protect, getUserProfile);
 router.get('/verify-email/:token', verifyEmail);
 
-module.exports = router;
+module.exports = router;``
