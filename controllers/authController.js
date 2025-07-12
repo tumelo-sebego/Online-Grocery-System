@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const Customer = require('../models/customerModel');
 const Driver = require('../models/driverModel');
+const Admin = require('../models/adminModel'); // Import the Admin model
 
 // Helper function to generate JWT token
 const generateToken = (id) => {
@@ -55,9 +56,12 @@ const registerUser = asyncHandler(async (req, res) => {
         userId: user._id,
       });
     } else if (role === 'admin') {
-      // Admin profile might be simpler, or a separate Admin model
-      // For now, just link to user
-      profile = { _id: user._id, firstName, lastName }; // Placeholder for admin profile
+      // Create an Admin profile
+      profile = await Admin.create({
+        firstName,
+        lastName,
+        userId: user._id,
+      });
     } else {
       res.status(400);
       throw new Error('Invalid user role');
