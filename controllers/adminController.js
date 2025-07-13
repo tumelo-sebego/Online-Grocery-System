@@ -185,6 +185,19 @@ const getProductCatalog = asyncHandler(async (req, res) => {
   res.json(products);
 });
 
+// @desc    Get a single generic product by ID
+// @route   GET /api/admin/product-catalog/:id
+// @access  Private (Admin)
+const getProductById = asyncHandler(async (req, res) => {
+  const product = await ProductCatalog.findById(req.params.id);
+  if (product) {
+    res.json(product);
+  } else {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+});
+
 // @desc    Add a new generic product
 // @route   POST /api/admin/product-catalog
 // @access  Private (Admin)
@@ -254,6 +267,7 @@ module.exports = {
   updateStore, // NEWLY ADDED
   syncProductsFromStore, // NEWLY ADDED
   getProductCatalog,
+  getProductById,
   addProductToCatalog,
   getStoreProducts,
   addStoreProduct,
