@@ -11,6 +11,7 @@ const {
   updateStore, // NEWLY ADDED
   syncProductsFromStore, // NEWLY ADDED
   getProductCatalog,
+  getProductById,
   addProductToCatalog,
   getStoreProducts,
   addStoreProduct,
@@ -39,6 +40,7 @@ router.post('/stores/:storeId/sync-products', syncProductsFromStore); // NEW ROU
 
 // Product Catalog Management (Generic Products)
 router.get('/product-catalog', getProductCatalog);
+router.get('/product-catalog/:id', getProductById);
 router.post('/product-catalog', addProductToCatalog);
 
 // Store Product Offerings Management (Specific prices/availability at stores)
